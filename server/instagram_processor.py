@@ -1,38 +1,43 @@
-import instaloader
+import yt_dlp
+import cv2
 import tempfile
 import os
-import cv2
+import numpy as np
 
 async def download_media(url: str) -> list:
-    loader = instaloader.Instaloader(
-        dirname_pattern=tempfile.gettempdir(),
-        save_metadata=False,
-        download_videos=True
-    )
+    """Download Instagram reel using yt-dlp and extract frames"""
+    ydl_opts = {
+        'format': 'best',
+        'outtmpl': os.path.join(tempfile.gettempdir(), '%(id)s.%(ext)s'),
+        'quiet': True,
+    }
     
-    shortcode = url.split("/")[-2]
-    post = instaloader.Post.from_shortcode(loader.context, shortcode)
-    
-    media_paths = []
-    
-    if post.is_video:
-        # Download video
-        loader.download_post(post, target=shortcode)
-        video_path = f"{tempfile.gettempdir()}/{shortcode}/{shortcode}.mp4"
-        
-        # Extract frames
-        vidcap = cv2.VideoCapture(video_path)
-        success, image = vidcap.read()
-        frame_count = 0
-        while success:
-            frame_path = f"{tempfile.gettempdir()}/{shortcode}_frame_{frame_count}.jpg"
-            cv2.imwrite(frame_path, image)
-            media_paths.append(frame_path)
-            frame_count += 1
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=True)
+            video_path = ydl.prepare_filename(info)
+            
+            # Extract frames
+            media_paths = []
+            vidcap = cv2.VideoCapture(video_path)
             success, image = vidcap.read()
-    else:
-        # Download image
-        loader.download_post(post, target=shortcode)
-        media_paths.append(f"{tempfile.gettempdir()}/{shortcode}/{post.url.split('/')[-1]}")
-    
-    return media_paths
+            frame_count = 0
+            
+            # We'll take 3 key frames
+            total_frames = int(vidcap.get(cv2.CAP_PROP_FRAME_COUNT))
+            frame_indices = [int(total_frames * i/4) for i in range(1, 4)]  # Get 3 frames evenly spaced
+            
+            for i in frame_indices:
+                vidcap.set(cv2.CAP_PROP_POS_FRAMES, i)
+                success, image = vidcap.read()
+                if success:
+                    frame_path = os.path.join(tempfile.gettempdir(), f"{info['id']}_frame_{i}.jpg")
+                    cv2.imwrite(frame_path, image)
+                    media_paths.append(frame_path)
+            
+            vidcap.release()
+            return media_paths
+            
+    except Exception as e:
+        print(f"Error downloading media: {str(e)}")
+        raise

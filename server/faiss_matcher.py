@@ -11,13 +11,13 @@ product_db = [
     {
         "id": 1, 
         "name": "Designer Handbag", 
-        "image_url": "http://example.com/handbag.jpg",
+        "image_url": "https://img.freepik.com/free-photo/beautiful-elegance-luxury-fashion-green-handbag_1203-7655.jpg?semt=ais_items_boosted&w=740",
         "embedding": np.random.rand(dimension).tolist()
     },
     {
         "id": 2, 
         "name": "Modern Chair", 
-        "image_url": "http://example.com/chair.jpg",
+        "image_url": "https://cdn.decornation.in/wp-content/uploads/2020/07/modern-dining-table-chairs.jpg",
         "embedding": np.random.rand(dimension).tolist()
     }
 ]
